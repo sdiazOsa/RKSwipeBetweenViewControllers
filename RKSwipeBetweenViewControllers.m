@@ -27,7 +27,6 @@ CGFloat X_OFFSET = 8.0; //%%% for some reason there's a little bit of a glitchy 
 @property (nonatomic) UIScrollView *pageScrollView;
 @property (nonatomic) NSInteger currentPageIndex;
 @property (nonatomic) BOOL isPageScrollingFlag; //%%% prevents scrolling / segment tap crash
-@property (nonatomic) BOOL hasAppearedFlag; //%%% prevents reloading (maintains state)
 
 @end
 
@@ -50,21 +49,20 @@ CGFloat X_OFFSET = 8.0; //%%% for some reason there's a little bit of a glitchy 
 - (void)viewDidLoad
 {
     [super viewDidLoad];
-
+    
     self.navigationBar.barTintColor = [UIColor colorWithRed:0.01 green:0.05 blue:0.06 alpha:1]; //%%% bartint
     self.navigationBar.translucent = NO;
     viewControllerArray = [[NSMutableArray alloc]init];
-    self.currentPageIndex = 0;
     self.isPageScrollingFlag = NO;
-    self.hasAppearedFlag = NO;
 }
+
 
 #pragma mark Customizables
 
 //%%% color of the status bar
 -(UIStatusBarStyle)preferredStatusBarStyle {
     return UIStatusBarStyleLightContent;
-//    return UIStatusBarStyleDefault;
+    //    return UIStatusBarStyleDefault;
 }
 
 //%%% sets up the tabs using a loop.  You can take apart the loop to customize individual buttons, but remember to tag the buttons.  (button.tag=0 and the second button.tag=1, etc)
@@ -74,7 +72,7 @@ CGFloat X_OFFSET = 8.0; //%%% for some reason there's a little bit of a glitchy 
     NSInteger numControllers = [viewControllerArray count];
     
     if (!buttonText) {
-         buttonText = [[NSArray alloc]initWithObjects: @"first",@"second",@"third",@"fourth",@"etc",@"etc",@"etc",@"etc",nil]; //%%%buttontitle
+        buttonText = [[NSArray alloc]initWithObjects: @"first",@"second",@"third",@"fourth",@"etc",@"etc",@"etc",@"etc",nil]; //%%%buttontitle
     }
     
     for (int i = 0; i<numControllers; i++) {
@@ -93,30 +91,30 @@ CGFloat X_OFFSET = 8.0; //%%% for some reason there's a little bit of a glitchy 
     
     //%%% example custom buttons example:
     /*
-    NSInteger width = (self.view.frame.size.width-(2*X_BUFFER))/3;
-    UIButton *leftButton = [[UIButton alloc]initWithFrame:CGRectMake(X_BUFFER, Y_BUFFER, width, HEIGHT)];
-    UIButton *middleButton = [[UIButton alloc]initWithFrame:CGRectMake(X_BUFFER+width, Y_BUFFER, width, HEIGHT)];
-    UIButton *rightButton = [[UIButton alloc]initWithFrame:CGRectMake(X_BUFFER+2*width, Y_BUFFER, width, HEIGHT)];
-    
-    [self.navigationBar addSubview:leftButton];
-    [self.navigationBar addSubview:middleButton];
-    [self.navigationBar addSubview:rightButton];
-    
-    leftButton.tag = 0;
-    middleButton.tag = 1;
-    rightButton.tag = 2;
-    
-    leftButton.backgroundColor = [UIColor colorWithRed:0.03 green:0.07 blue:0.08 alpha:1];
-    middleButton.backgroundColor = [UIColor colorWithRed:0.03 green:0.07 blue:0.08 alpha:1];
-    rightButton.backgroundColor = [UIColor colorWithRed:0.03 green:0.07 blue:0.08 alpha:1];
-    
-    [leftButton addTarget:self action:@selector(tapSegmentButtonAction:) forControlEvents:UIControlEventTouchUpInside];
-    [middleButton addTarget:self action:@selector(tapSegmentButtonAction:) forControlEvents:UIControlEventTouchUpInside];
-    [rightButton addTarget:self action:@selector(tapSegmentButtonAction:) forControlEvents:UIControlEventTouchUpInside];
-    
-    [leftButton setTitle:@"left" forState:UIControlStateNormal];
-    [middleButton setTitle:@"middle" forState:UIControlStateNormal];
-    [rightButton setTitle:@"right" forState:UIControlStateNormal];
+     NSInteger width = (self.view.frame.size.width-(2*X_BUFFER))/3;
+     UIButton *leftButton = [[UIButton alloc]initWithFrame:CGRectMake(X_BUFFER, Y_BUFFER, width, HEIGHT)];
+     UIButton *middleButton = [[UIButton alloc]initWithFrame:CGRectMake(X_BUFFER+width, Y_BUFFER, width, HEIGHT)];
+     UIButton *rightButton = [[UIButton alloc]initWithFrame:CGRectMake(X_BUFFER+2*width, Y_BUFFER, width, HEIGHT)];
+     
+     [self.navigationBar addSubview:leftButton];
+     [self.navigationBar addSubview:middleButton];
+     [self.navigationBar addSubview:rightButton];
+     
+     leftButton.tag = 0;
+     middleButton.tag = 1;
+     rightButton.tag = 2;
+     
+     leftButton.backgroundColor = [UIColor colorWithRed:0.03 green:0.07 blue:0.08 alpha:1];
+     middleButton.backgroundColor = [UIColor colorWithRed:0.03 green:0.07 blue:0.08 alpha:1];
+     rightButton.backgroundColor = [UIColor colorWithRed:0.03 green:0.07 blue:0.08 alpha:1];
+     
+     [leftButton addTarget:self action:@selector(tapSegmentButtonAction:) forControlEvents:UIControlEventTouchUpInside];
+     [middleButton addTarget:self action:@selector(tapSegmentButtonAction:) forControlEvents:UIControlEventTouchUpInside];
+     [rightButton addTarget:self action:@selector(tapSegmentButtonAction:) forControlEvents:UIControlEventTouchUpInside];
+     
+     [leftButton setTitle:@"left" forState:UIControlStateNormal];
+     [middleButton setTitle:@"middle" forState:UIControlStateNormal];
+     [rightButton setTitle:@"right" forState:UIControlStateNormal];
      */
     
     [self setupSelector];
@@ -136,11 +134,11 @@ CGFloat X_OFFSET = 8.0; //%%% for some reason there's a little bit of a glitchy 
 #pragma mark Setup
 
 -(void)viewWillAppear:(BOOL)animated {
-    if (!self.hasAppearedFlag) {
-        [self setupPageViewController];
-        [self setupSegmentButtons];
-        self.hasAppearedFlag = YES;
-    }
+    
+    self.currentPageIndex = self.lastView.integerValue;
+    [self setupPageViewController];
+    [self setupSegmentButtons];
+    self.lastView = 0;
 }
 
 //%%% generic setup stuff for a pageview controller.  Sets up the scrolling style and delegate for the controller
@@ -148,7 +146,7 @@ CGFloat X_OFFSET = 8.0; //%%% for some reason there's a little bit of a glitchy 
     pageController = (UIPageViewController*)self.topViewController;
     pageController.delegate = self;
     pageController.dataSource = self;
-    [pageController setViewControllers:@[[viewControllerArray objectAtIndex:0]] direction:UIPageViewControllerNavigationDirectionForward animated:YES completion:nil];
+    [pageController setViewControllers:@[[viewControllerArray objectAtIndex:self.lastView.intValue]] direction:UIPageViewControllerNavigationDirectionForward animated:YES completion:nil];
     [self syncScrollView];
 }
 
@@ -187,7 +185,7 @@ CGFloat X_OFFSET = 8.0; //%%% for some reason there's a little bit of a glitchy 
             for (int i = (int)tempIndex+1; i<=button.tag; i++) {
                 [pageController setViewControllers:@[[viewControllerArray objectAtIndex:i]] direction:UIPageViewControllerNavigationDirectionForward animated:YES completion:^(BOOL complete){
                     
-                    //%%% if the action finishes scrolling (i.e. the user doesn't stop it in the middle),
+                    //%%% ieso f the action finishes scrolling (i.e. the user doesn't stop it in the middle),
                     //then it updates the page that it's currently on
                     if (complete) {
                         [weakSelf updateCurrentPageIndex:i];
@@ -223,8 +221,21 @@ CGFloat X_OFFSET = 8.0; //%%% for some reason there's a little bit of a glitchy 
     //%%% checks to see what page you are on and adjusts the xCoor accordingly.
     //i.e. if you're on the second page, it makes sure that the bar starts from the frame.origin.x of the
     //second tab instead of the beginning
+    
+    
+    //    if (self.lastView==1) {
+    //        self.currentPageIndex=1;
+    //    }
+    
+    NSInteger index = 0;
+    
+    if (self.selectionBar.frame.origin.x>150){
+        index = 1;
+    }
+    
     NSInteger xCoor = X_BUFFER+selectionBar.frame.size.width*self.currentPageIndex-X_OFFSET;
     
+    NSLog(@"%d",xCoor, self.currentPageIndex);
     selectionBar.frame = CGRectMake(xCoor-xFromCenter/[viewControllerArray count], selectionBar.frame.origin.y, selectionBar.frame.size.width, selectionBar.frame.size.height);
 }
 
@@ -235,14 +246,15 @@ CGFloat X_OFFSET = 8.0; //%%% for some reason there's a little bit of a glitchy 
 
 - (void)didReceiveMemoryWarning {
     [super didReceiveMemoryWarning];
+    // Dispose of any resources that can be recreated.
 }
 
 
 #pragma mark - Page View Controller Data Source
 
 - (UIViewController *)pageViewController:(UIPageViewController *)pageViewController viewControllerBeforeViewController:(UIViewController *)viewController {
-    NSInteger index = [viewControllerArray indexOfObject:viewController];
-
+    NSInteger index = [self indexOfController:viewController];
+    
     if ((index == NSNotFound) || (index == 0)) {
         return nil;
     }
@@ -252,8 +264,8 @@ CGFloat X_OFFSET = 8.0; //%%% for some reason there's a little bit of a glitchy 
 }
 
 - (UIViewController *)pageViewController:(UIPageViewController *)pageViewController viewControllerAfterViewController:(UIViewController *)viewController {
-    NSInteger index = [viewControllerArray indexOfObject:viewController];
-
+    NSInteger index = [self indexOfController:viewController];
+    
     if (index == NSNotFound) {
         return nil;
     }
@@ -267,8 +279,21 @@ CGFloat X_OFFSET = 8.0; //%%% for some reason there's a little bit of a glitchy 
 
 -(void)pageViewController:(UIPageViewController *)pageViewController didFinishAnimating:(BOOL)finished previousViewControllers:(NSArray *)previousViewControllers transitionCompleted:(BOOL)completed {
     if (completed) {
-        self.currentPageIndex = [viewControllerArray indexOfObject:[pageViewController.viewControllers lastObject]];
+        self.currentPageIndex = [self indexOfController:[pageViewController.viewControllers lastObject]];
     }
+}
+
+
+//%%% checks to see which item we are currently looking at from the array of view controllers.
+// not really a delegate method, but is used in all the delegate methods, so might as well include it here
+-(NSInteger)indexOfController:(UIViewController *)viewController {
+    for (int i = 0; i<[viewControllerArray count]; i++) {
+        if (viewController == [viewControllerArray objectAtIndex:i])
+        {
+            return i;
+        }
+    }
+    return NSNotFound;
 }
 
 #pragma mark - Scroll View Delegate
